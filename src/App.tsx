@@ -182,8 +182,8 @@ const RetroButton = ({ children, onClick, disabled = false, color = 'green', cla
       className={`font-pixel w-full px-4 py-4 text-center border-4 transition-all duration-300 ${c}
         ${disabled ? 'cursor-not-allowed opacity-50' : 'active:scale-95 font-bold'} ${className}`}
       style={!disabled ? { 
-        textShadow: `0 0 5px currentColor`,
-        boxShadow: disabled ? 'none' : '0 0 5px currentColor',
+        textShadow: `0 0 2px currentColor, 0 0 6px currentColor`,
+        boxShadow: disabled ? 'none' : '0 0 4px currentColor, inset 0 0 2px currentColor',
       } : {}}
       onMouseEnter={(e) => { !disabled && (e.currentTarget.style.backgroundColor = hoverBg) }}
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
@@ -315,23 +315,23 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
   };
 
   return (
-    <div className="flex flex-col items-center mt-4">
-      <div className="flex justify-between items-end w-[320px] h-[64px] mb-4 shrink-0">
+    <div className="flex flex-col items-center mt-4 w-full px-4 max-w-2xl">
+      <div className="flex justify-between items-end w-full mb-4 shrink-0">
         <div className="flex flex-col justify-end h-full">
-          <h2 className="text-xl font-pixel mb-2 text-[#00ffff] leading-none" style={{ textShadow: '0 0 5px #00ffff' }}>第 {level} 关</h2>
-          <div className="text-[10px] font-pixel border border-[#39ff14] text-[#39ff14] px-2 py-1 inline-block whitespace-nowrap" style={{ boxShadow: '0 0 5px #39ff14, inset 0 0 5px #39ff14', textShadow: '0 0 5px #39ff14' }}>
+          <h2 className="text-2xl sm:text-3xl font-pixel mb-2 text-[#00ffff] leading-none" style={{ textShadow: '0 0 5px #00ffff' }}>第 {level} 关</h2>
+          <div className="text-[10px] sm:text-xs font-pixel border border-[#39ff14] text-[#39ff14] px-2 py-1 inline-block whitespace-nowrap" style={{ boxShadow: '0 0 5px #39ff14, inset 0 0 5px #39ff14', textShadow: '0 0 5px #39ff14' }}>
             {turn === 1 && status === 'playing' ? '> 你的回合' : '> 电脑思考中...'}
           </div>
         </div>
         <div className="text-right font-pixel flex flex-col justify-end h-full text-[#39ff14]" style={{ textShadow: `0 0 5px currentColor` }}>
-          <div className="text-[10px] text-gray-400 mb-2 leading-none tracking-widest text-right">步数</div>
-          <div className="text-2xl leading-none">{playerMoves}</div>
+          <div className="text-[10px] sm:text-xs text-gray-400 mb-2 leading-none tracking-widest text-right">步数</div>
+          <div className="text-3xl sm:text-4xl leading-none">{playerMoves}</div>
         </div>
       </div>
 
-      <div className="relative border-4 border-[#ff073a] bg-[#0d0e15] mb-6 select-none" style={{ width: 320, height: 320, boxShadow: '0 0 15px #ff073a, inset 0 0 15px #ff073a' }}>
+      <div className="relative border-4 border-[#ff073a] bg-[#0d0e15] mb-6 select-none w-full aspect-square max-w-lg mx-auto" style={{ boxShadow: '0 0 15px #ff073a, inset 0 0 15px #ff073a' }}>
         {/* Grid Background */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 320 320">
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
           <defs>
             <linearGradient id="gridGlow" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#ff073a" stopOpacity="0.3" />
@@ -339,20 +339,20 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
               <stop offset="100%" stopColor="#00ffff" stopOpacity="0.3" />
             </linearGradient>
           </defs>
-          <rect x={0} y={0} width={320} height={320} fill="url(#gridGlow)" />
+          <rect x={0} y={0} width={100} height={100} fill="url(#gridGlow)" />
           {[0, 1, 2, 3].map(i => (
-            <line key={`h-${i}`} x1="40" y1={40 + i * 80} x2="280" y2={40 + i * 80} stroke="#ff073a" strokeWidth="2" strokeOpacity="0.5" style={{ filter: 'drop-shadow(0 0 3px #ff073a)' }} />
+            <line key={`h-${i}`} x1="12.5" y1={12.5 + i * 25} x2="87.5" y2={12.5 + i * 25} stroke="#ff073a" strokeWidth="0.5" strokeOpacity="0.5" style={{ filter: 'drop-shadow(0 0 1px #ff073a)' }} />
           ))}
           {[0, 1, 2, 3].map(i => (
-            <line key={`v-${i}`} x1={40 + i * 80} y1="40" x2={40 + i * 80} y2="280" stroke="#ff073a" strokeWidth="2" strokeOpacity="0.5" style={{ filter: 'drop-shadow(0 0 3px #ff073a)' }} />
+            <line key={`v-${i}`} x1={12.5 + i * 25} y1="12.5" x2={12.5 + i * 25} y2="87.5" stroke="#ff073a" strokeWidth="0.5" strokeOpacity="0.5" style={{ filter: 'drop-shadow(0 0 1px #ff073a)' }} />
           ))}
         </svg>
 
         {board.map((stone, i) => {
           let r = Math.floor(i / 4);
           let c = i % 4;
-          let x = 40 + c * 80;
-          let y = 40 + r * 80;
+          let x = 12.5 + c * 25;
+          let y = 12.5 + r * 25;
 
           let isValidTarget = false;
           if (selectedNode !== null && stone === 0) {
@@ -367,14 +367,14 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
             <div
               key={`node-${i}`}
               className={`absolute flex items-center justify-center cursor-pointer ${isValidTarget ? 'z-20' : 'z-10'}`}
-              style={{ left: x, top: y, width: 48, height: 48, transform: 'translate(-50%, -50%)' }}
+              style={{ left: `${x}%`, top: `${y}%`, width: '20%', height: '20%', transform: 'translate(-50%, -50%)' }}
               onClick={() => handleNodeClick(i)}
             >
-              <div className="w-2 h-2 bg-[#ff073a] opacity-50 rounded-full pointer-events-none absolute" style={{ boxShadow: '0 0 5px #ff073a' }} />
+              <div className="w-[15%] h-[15%] bg-[#ff073a] opacity-50 rounded-full pointer-events-none absolute" style={{ boxShadow: '0 0 5px #ff073a' }} />
 
               {isValidTarget && turn === 1 && (
                 <>
-                  <div className="absolute w-10 h-10 bg-transparent rounded-none border border-[#39ff14] animate-pulse opacity-60 pointer-events-none" style={{ boxShadow: '0 0 10px #39ff14, inset 0 0 10px #39ff14' }} />
+                  <div className="absolute w-[80%] h-[80%] bg-transparent rounded-none border-2 border-[#39ff14] animate-pulse opacity-60 pointer-events-none" style={{ boxShadow: '0 0 10px #39ff14, inset 0 0 10px #39ff14' }} />
                 </>
               )}
             </div>
@@ -384,8 +384,8 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
         {pieces.map(piece => {
           let r = Math.floor(piece.pos / 4);
           let c = piece.pos % 4;
-          let x = 40 + c * 80;
-          let y = 40 + r * 80;
+          let x = 12.5 + c * 25;
+          let y = 12.5 + r * 25;
 
           let isSelected = selectedNode === piece.pos;
 
@@ -393,35 +393,37 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
             <motion.div
               key={piece.id}
               initial={false}
-              animate={{ x, y }}
+              animate={{ left: `${x}%`, top: `${y}%` }}
               transition={{ type: "spring", stiffness: 450, damping: 30 }}
               className={`absolute flex items-center justify-center z-30 ${piece.type === 1 && turn === 1 && status === 'playing' ? 'cursor-pointer' : ''}`}
-              style={{ left: 0, top: 0, width: 48, height: 48, marginLeft: -24, marginTop: -24 }}
+              style={{ width: '25%', height: '25%', transform: 'translate(-50%, -50%)' }}
               onClick={(e) => { e.stopPropagation(); handleNodeClick(piece.pos); }}
             >
-              {piece.type === 1 && (
-                <div className={`absolute w-10 h-10 border-2 border-[#39ff14] bg-[#1a1c29] transition-transform flex items-center justify-center ${isSelected ? 'scale-110 translate-y-[-2px]' : ''}`} style={{ boxShadow: isSelected ? '0 0 20px #39ff14, inset 0 0 10px #39ff14' : '0 0 5px #39ff14, inset 0 0 5px #39ff14' }}>
-                  <div className="w-4 h-4 bg-[#39ff14]" style={{ boxShadow: '0 0 10px #39ff14' }} />
-                </div>
-              )}
-              {piece.type === 2 && (
-                <div className="absolute w-10 h-10 border-2 border-[#ff073a] bg-[#1a1c29] flex items-center justify-center transition-transform" style={{ boxShadow: '0 0 5px #ff073a, inset 0 0 5px #ff073a' }}>
-                  <div className="w-4 h-4 border-2 border-[#ff073a] rotate-45" style={{ boxShadow: '0 0 10px #ff073a' }} />
-                </div>
-              )}
+              <div style={{ width: '80%', height: '80%' }} className="relative flex items-center justify-center">
+                {piece.type === 1 && (
+                  <div className={`absolute w-full h-full border-2 sm:border-4 border-[#39ff14] bg-[#1a1c29] transition-transform flex items-center justify-center ${isSelected ? 'scale-110 translate-y-[-2px]' : ''}`} style={{ boxShadow: isSelected ? '0 0 20px #39ff14, inset 0 0 10px #39ff14' : '0 0 5px #39ff14, inset 0 0 5px #39ff14' }}>
+                    <div className="w-[20%] h-[20%] bg-[#39ff14]" style={{ boxShadow: '0 0 10px #39ff14' }} />
+                  </div>
+                )}
+                {piece.type === 2 && (
+                  <div className="absolute w-full h-full border-2 sm:border-4 border-[#ff073a] bg-[#1a1c29] flex items-center justify-center transition-transform" style={{ boxShadow: '0 0 5px #ff073a, inset 0 0 5px #ff073a' }}>
+                    <div className="w-[20%] h-[20%] border sm:border-2 border-[#ff073a] rotate-45" style={{ boxShadow: '0 0 10px #ff073a' }} />
+                  </div>
+                )}
+              </div>
             </motion.div>
           );
         })}
       </div>
 
-      <div className="h-[64px] w-[320px] mb-2 flex flex-col justify-center shrink-0">
-        <div className="flex gap-4 w-full mb-2">
-          <RetroButton onClick={undoMove} disabled={history.length === 0 || status !== 'playing' || turn !== 1} color="yellow" className="py-2 text-[10px]">悔棋 ↶</RetroButton>
-          <RetroButton onClick={resetGame} color="cyan" className="py-2 text-[10px]">重新开始 ↻</RetroButton>
+      <div className="h-auto w-full max-w-lg mb-2 flex flex-col justify-center shrink-0">
+        <div className="flex gap-4 w-full mb-4">
+          <RetroButton onClick={undoMove} disabled={history.length === 0 || status !== 'playing' || turn !== 1} color="yellow" className="py-3 sm:py-4 text-xs sm:text-sm">悔棋 ↶</RetroButton>
+          <RetroButton onClick={resetGame} color="cyan" className="py-3 sm:py-4 text-xs sm:text-sm">重新开始 ↻</RetroButton>
         </div>
         
         {message && status === 'playing' && (
-          <div className="border border-[#00ffff] bg-[#00ffff]/10 p-2 font-pixel text-center w-full text-[10px] text-[#00ffff] leading-relaxed" style={{ textShadow: '0 0 5px #00ffff', boxShadow: '0 0 10px #00ffff, inset 0 0 5px #00ffff' }}>
+          <div className="border-2 border-[#00ffff] bg-[#00ffff]/10 p-4 font-pixel text-center w-full text-xs sm:text-sm text-[#00ffff] leading-relaxed" style={{ textShadow: '0 0 5px #00ffff', boxShadow: '0 0 10px #00ffff, inset 0 0 5px #00ffff' }}>
             {message}
           </div>
         )}
@@ -429,11 +431,11 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
 
       {status !== 'playing' && (
         <div className="absolute inset-0 bg-[#0d0e15]/80 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className={`bg-[#0d0e15] border-[3px] p-8 flex flex-col items-center text-center max-w-[340px] w-full ${status==='win'? 'border-[#39ff14]' : 'border-[#ff073a]'}`} style={{ boxShadow: `0 0 20px ${status==='win' ? '#39ff14' : '#ff073a'}, inset 0 0 20px ${status==='win' ? '#39ff14' : '#ff073a'}` }}>
-            <h3 className={`text-2xl font-pixel mb-4 ${status === 'win' ? 'text-[#39ff14]' : 'text-[#ff073a]'}`} style={{ textShadow: `0 0 10px currentColor` }}>
+          <div className={`bg-[#0d0e15] border-[3px] p-8 flex flex-col items-center text-center max-w-md w-full ${status==='win'? 'border-[#39ff14]' : 'border-[#ff073a]'}`} style={{ boxShadow: `0 0 20px ${status==='win' ? '#39ff14' : '#ff073a'}, inset 0 0 20px ${status==='win' ? '#39ff14' : '#ff073a'}` }}>
+            <h3 className={`text-2xl sm:text-3xl font-pixel mb-6 ${status === 'win' ? 'text-[#39ff14]' : 'text-[#ff073a]'}`} style={{ textShadow: `0 0 10px currentColor` }}>
               {status === 'win' ? '系统破解！挑战成功' : '协议失败！再接再厉'}
             </h3>
-            <p className="font-cyber text-xl mb-8 whitespace-pre-wrap text-[#00ffff]" style={{ textShadow: '0 0 5px #00ffff' }}>{message}</p>
+            <p className="font-cyber text-lg sm:text-xl mb-10 whitespace-pre-wrap text-[#00ffff]" style={{ textShadow: '0 0 5px #00ffff' }}>{message}</p>
             <div className="flex flex-col gap-4 w-full">
               {status === 'win' && level < 20 && (
                 <RetroButton onClick={() => onWin(level)} color="green">
@@ -456,8 +458,8 @@ function Game({ level, onBack, onWin }: { level: number, onBack: () => void, onW
         </div>
       )}
 
-      <div className="w-[320px]">
-        <RetroButton onClick={onBack} color="red" className="w-full text-xs">放弃任务</RetroButton>
+      <div className="w-full max-w-lg mt-4">
+        <RetroButton onClick={onBack} color="red" className="w-full text-xs sm:text-sm py-3">放弃任务</RetroButton>
       </div>
     </div>
   )
@@ -540,22 +542,22 @@ export default function App() {
       </div>
 
       {view === 'menu' && (
-        <div className="flex flex-col items-center mt-6 w-full max-w-[480px]">
-          <h1 className="text-7xl font-sans italic font-black mb-2 text-[#fff] tracking-widest text-center" style={{ textShadow: '0 0 5px #fff, 0 0 10px #fff, 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 80px #00ffff, 0 0 90px #00ffff', fontFamily: "'Arial Black', sans-serif" }}>
+        <div className="flex flex-col items-center mt-6 w-full max-w-[480px] px-4">
+          <h1 className="text-5xl sm:text-7xl font-sans italic font-black mb-2 text-[#fff] tracking-widest text-center" style={{ textShadow: '0 0 2px #fff, 0 0 10px #00ffff, 0 0 20px #00ffff', fontFamily: "'Arial Black', sans-serif" }}>
             摘星盘
           </h1>
-          <h2 className="text-sm font-pixel text-[#ff073a] tracking-widest mb-12" style={{ textShadow: '0 0 5px #ff073a' }}>
+          <h2 className="text-xs sm:text-sm font-pixel text-[#ff073a] tracking-widest mb-8 sm:mb-12" style={{ textShadow: '0 0 2px #fff, 0 0 6px #ff073a, 0 0 12px #ff073a' }}>
             赛博破解版
           </h2>
 
-          <div className="border-[3px] border-[#ff073a] p-8 w-full relative" style={{ boxShadow: '0 0 10px #ff073a, inset 0 0 10px #ff073a' }}>
-            <h3 className="text-xl font-pixel text-[#39ff14] text-center mb-8" style={{ textShadow: '0 0 5px #39ff14' }}>
+          <div className="border-[3px] border-[#ff073a] p-4 sm:p-8 w-full relative mx-4" style={{ boxShadow: '0 0 10px #ff073a, inset 0 0 6px #ff073a' }}>
+            <h3 className="text-lg sm:text-xl font-pixel text-[#39ff14] text-center mb-6 sm:mb-8" style={{ textShadow: '0 0 2px #fff, 0 0 6px #39ff14, 0 0 12px #39ff14' }}>
               选择模式
             </h3>
           
-            <div className="flex flex-col gap-4 w-full px-8">
+            <div className="flex flex-col gap-4 w-full px-4 sm:px-8">
               {unlockedLevel > 1 && (
-                <RetroButton onClick={() => { setCurrentLevel(unlockedLevel); setView('game'); }} color="green" className="text-xl">
+                <RetroButton onClick={() => { setCurrentLevel(unlockedLevel); setView('game'); }} color="green" className="text-lg sm:text-xl py-3">
                   继续游戏 ▶
                 </RetroButton>
               )}
@@ -567,48 +569,48 @@ export default function App() {
                   setView('game'); 
                 }} 
                 color="red" 
-                className="text-xl"
+                className="text-lg sm:text-xl py-3"
               >
                 {unlockedLevel > 1 ? '重新开始' : '开始游戏'}
               </RetroButton>
-              <RetroButton onClick={() => setView('levels')} color="yellow" className="text-xl">
+              <RetroButton onClick={() => setView('levels')} color="yellow" className="text-lg sm:text-xl py-3">
                 选择关卡
               </RetroButton>
             </div>
 
-            <div className="mt-12 text-center text-sm font-cyber text-gray-300 tracking-widest space-y-2 opacity-80">
+            <div className="mt-8 sm:mt-12 text-center text-xs sm:text-sm font-cyber text-[#00ffff] tracking-widest space-y-2 opacity-80" style={{ textShadow: '0 0 2px #00ffff, 0 0 5px #00ffff' }}>
               <p>白子先手</p>
               <p>每次移动一格</p>
               <p>四子连线即为胜利</p>
             </div>
           </div>
           
-          <div className="mt-16 text-xs font-cyber text-gray-600">
+          <div className="mt-12 sm:mt-16 text-[10px] sm:text-xs font-cyber text-[#ffff00] opacity-70" style={{ textShadow: '0 0 2px #ffff00, 0 0 5px #ffff00' }}>
             © 3X3 LINE — 像素版
           </div>
         </div>
       )}
 
       {view === 'levels' && (
-        <div className="flex flex-col items-center w-full max-w-md px-4 mt-8">
-          <h2 className="text-3xl font-pixel mb-8 text-[#00ffff] text-center pb-2" style={{ textShadow: '0 0 10px #00ffff' }}>关卡选择</h2>
-          <div className="grid grid-cols-4 gap-4 mb-10 w-[320px]">
+        <div className="flex flex-col items-center w-full max-w-md px-6 mt-8">
+          <h2 className="text-2xl sm:text-3xl font-pixel mb-8 text-[#00ffff] text-center pb-2" style={{ textShadow: '0 0 10px #00ffff' }}>关卡选择</h2>
+          <div className="grid grid-cols-4 gap-3 sm:gap-4 mb-10 w-full">
             {Array.from({ length: 20 }, (_, i) => i + 1).map(l => (
               <RetroButton
                 key={l}
                 disabled={l > unlockedLevel}
                 color={l === unlockedLevel ? "cyan" : "green"}
                 onClick={() => { setCurrentLevel(l); setView('game'); }}
-                className={`h-16 ${l > unlockedLevel ? '' : 'hover:scale-105'} p-0`}
+                className={`h-14 sm:h-16 ${l > unlockedLevel ? '' : 'hover:scale-105'} p-0`}
               >
                 <div className="flex flex-col items-center justify-center">
-                   <div className="text-lg">{l}</div>
+                   <div className="text-base sm:text-lg">{l}</div>
                 </div>
               </RetroButton>
             ))}
           </div>
-          <div className="w-[320px]">
-             <RetroButton onClick={() => setView('menu')} color="red" className="w-full">返回主菜单</RetroButton>
+          <div className="w-full">
+             <RetroButton onClick={() => setView('menu')} color="red" className="w-full py-3">返回主菜单</RetroButton>
           </div>
         </div>
       )}
