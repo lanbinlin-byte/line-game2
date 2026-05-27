@@ -1,10 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
+import { synth } from './audio';
 
 const INITIAL_BOARD = [
   2, 2, 2, 2, // Row 0 (AI - Black)
   0, 0, 0, 0,
   0, 0, 0, 0,
   1, 1, 1, 1  // Row 3 (Player - White)
+];
+
+type PieceType = { id: string, type: 1 | 2, pos: number };
+
+const INITIAL_PIECES: PieceType[] = [
+  { id: 'b0', type: 2, pos: 0 },
+  { id: 'b1', type: 2, pos: 1 },
+  { id: 'b2', type: 2, pos: 2 },
+  { id: 'b3', type: 2, pos: 3 },
+  { id: 'w0', type: 1, pos: 12 },
+  { id: 'w1', type: 1, pos: 13 },
+  { id: 'w2', type: 1, pos: 14 },
+  { id: 'w3', type: 1, pos: 15 },
 ];
 
 const WINNING_LINES = [
@@ -142,21 +157,45 @@ function getBestMove(board: number[], level: number) {
   return bestMove;
 }
 
-const RetroButton = ({ children, onClick, disabled = false, active = false, className = '' }: any) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`px-4 py-3 font-black border-4 border-black text-center transition-all active:translate-y-1 active:shadow-none
-      ${disabled ? 'bg-gray-400 text-gray-600 cursor-not-allowed border-gray-600 opacity-80' :
-        active ? 'bg-yellow-400 translate-y-1 shadow-none' :
-          'bg-white hover:bg-yellow-100 shadow-[4px_4px_0_0_#000]'} ${className}`}
-  >
-    {children}
-  </button>
-);
+const RetroButton = ({ children, onClick, disabled = false, color = 'green', className = '' }: any) => {
+  const colors: Record<string, string> = {
+    green: 'border-[#39ff14] text-[#39ff14] hover:shadow-[0_0_15px_#39ff14,inset_0_0_10px_#39ff14]',
+    red: 'border-[#ff073a] text-[#ff073a] hover:shadow-[0_0_15px_#ff073a,inset_0_0_10px_#ff073a]',
+    yellow: 'border-[#ffff00] text-[#ffff00] hover:shadow-[0_0_15px_#ffff00,inset_0_0_10px_#ffff00]',
+    cyan: 'border-[#00ffff] text-[#00ffff] hover:shadow-[0_0_15px_#00ffff,inset_0_0_10px_#00ffff]',
+    gray: 'border-gray-500 text-gray-500',
+  };
+  const baseColors: Record<string, string> = {
+    green: 'rgba(57,255,20,0.1)',
+    red: 'rgba(255,7,58,0.1)',
+    yellow: 'rgba(255,255,0,0.1)',
+    cyan: 'rgba(0,255,255,0.1)',
+    gray: 'transparent',
+  }
+  const c = disabled ? colors.gray : (colors[color] || colors.green);
+  const hoverBg = disabled ? baseColors.gray : (baseColors[color] || baseColors.green);
+  
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`font-pixel w-full px-4 py-4 text-center border-4 transition-all duration-300 ${c}
+        ${disabled ? 'cursor-not-allowed opacity-50' : 'active:scale-95 font-bold'} ${className}`}
+      style={!disabled ? { 
+        textShadow: `0 0 5px currentColor`,
+        boxShadow: disabled ? 'none' : '0 0 5px currentColor',
+      } : {}}
+      onMouseEnter={(e) => { !disabled && (e.currentTarget.style.backgroundColor = hoverBg) }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+    >
+      {children}
+    </button>
+  );
+};
 
 function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMoves: number, onBack: () => void, onWin: (lvl: number) => void }) {
   const [board, setBoard] = useState<number[]>([...INITIAL_BOARD]);
+  const [pieces, setPieces] = useState<PieceType[]>([...INITIAL_PIECES]);
   const [turn, setTurn] = useState<number>(1);
   const [playerMoves, setPlayerMoves] = useState<number>(0);
   const [selectedNode, setSelectedNode] = useState<number | null>(null);
@@ -183,15 +222,14 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
     }
 
     if (turn === 2 && status === 'playing') {
-      if (!message) {
-        setMessage('电脑行动中...');
-      }
       const timer = setTimeout(() => {
         let aiTarget = getBestMove([...board], level);
         if (aiTarget) {
           let newBoard = [...board];
           newBoard[aiTarget.from] = 0;
           newBoard[aiTarget.to] = 2;
+          
+          setPieces(prev => prev.map(p => p.pos === aiTarget!.from ? { ...p, pos: aiTarget!.to } : p));
           setBoard(newBoard);
 
           let winner = checkWinSilent(newBoard);
@@ -230,6 +268,7 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
       newBoard[i] = 1;
       let newMoves = playerMoves + 1;
 
+      setPieces(prev => prev.map(p => p.pos === selectedNode ? { ...p, pos: i } : p));
       setPlayerMoves(newMoves);
       setBoard(newBoard);
       setSelectedNode(null);
@@ -257,6 +296,7 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
 
   const resetGame = () => {
     setBoard([...INITIAL_BOARD]);
+    setPieces([...INITIAL_PIECES]);
     setTurn(1);
     setPlayerMoves(0);
     setSelectedNode(null);
@@ -265,30 +305,37 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="flex justify-between items-end w-[320px] mb-4">
-        <div>
-          <h2 className="text-2xl font-black mb-1">第 {level} 关</h2>
-          <div className="text-sm font-bold bg-white border-2 border-black px-2 py-1 inline-block shadow-[2px_2px_0_0_#000]">
-            {turn === 1 && status === 'playing' ? '👉 你的回合' : '⏳ 电脑行动...'}
+    <div className="flex flex-col items-center mt-4">
+      <div className="flex justify-between items-end w-[320px] h-[64px] mb-4 shrink-0">
+        <div className="flex flex-col justify-end h-full">
+          <h2 className="text-xl font-pixel mb-2 text-[#00ffff] leading-none" style={{ textShadow: '0 0 5px #00ffff' }}>LEVEL {level}</h2>
+          <div className="text-[10px] font-pixel border border-[#39ff14] text-[#39ff14] px-2 py-1 inline-block whitespace-nowrap" style={{ boxShadow: '0 0 5px #39ff14, inset 0 0 5px #39ff14', textShadow: '0 0 5px #39ff14' }}>
+            {turn === 1 && status === 'playing' ? '> YOUR TURN' : '> CPU TURN...'}
           </div>
         </div>
-        <div className={`text-right font-black ${playerMoves >= targetMoves ? 'text-green-700' : 'text-blue-700'}`}>
-          <div className="text-sm text-black">通关步数</div>
-          <div className="text-3xl">{playerMoves}<span className="text-xl text-black"> / {targetMoves}</span></div>
+        <div className={`text-right font-pixel flex flex-col justify-end h-full ${playerMoves >= targetMoves ? 'text-[#39ff14]' : 'text-[#ff073a]'}`} style={{ textShadow: `0 0 5px currentColor` }}>
+          <div className="text-[10px] text-gray-400 mb-2 leading-none tracking-widest text-right">TARGET</div>
+          <div className="text-2xl leading-none">{playerMoves}<span className="text-sm text-gray-500">/{targetMoves}</span></div>
         </div>
       </div>
 
-      <div className="relative border-4 border-black bg-[#eedaab] shadow-[8px_8px_0_0_#000] mb-6 select-none" style={{ width: 320, height: 320 }}>
+      <div className="relative border-4 border-[#ff073a] bg-[#0d0e15] mb-6 select-none" style={{ width: 320, height: 320, boxShadow: '0 0 15px #ff073a, inset 0 0 15px #ff073a' }}>
         {/* Grid Background */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 320 320">
+          <defs>
+            <linearGradient id="gridGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff073a" stopOpacity="0.3" />
+              <stop offset="50%" stopColor="#39ff14" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="#00ffff" stopOpacity="0.3" />
+            </linearGradient>
+          </defs>
+          <rect x={0} y={0} width={320} height={320} fill="url(#gridGlow)" />
           {[0, 1, 2, 3].map(i => (
-            <line key={`h-${i}`} x1="40" y1={40 + i * 80} x2="280" y2={40 + i * 80} stroke="#444" strokeWidth="4" />
+            <line key={`h-${i}`} x1="40" y1={40 + i * 80} x2="280" y2={40 + i * 80} stroke="#ff073a" strokeWidth="2" strokeOpacity="0.5" style={{ filter: 'drop-shadow(0 0 3px #ff073a)' }} />
           ))}
           {[0, 1, 2, 3].map(i => (
-            <line key={`v-${i}`} x1={40 + i * 80} y1="40" x2={40 + i * 80} y2="280" stroke="#444" strokeWidth="4" />
+            <line key={`v-${i}`} x1={40 + i * 80} y1="40" x2={40 + i * 80} y2="280" stroke="#ff073a" strokeWidth="2" strokeOpacity="0.5" style={{ filter: 'drop-shadow(0 0 3px #ff073a)' }} />
           ))}
-          <rect x={2} y={2} width={316} height={316} fill="none" stroke="black" strokeWidth="8" />
         </svg>
 
         {board.map((stone, i) => {
@@ -297,7 +344,6 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
           let x = 40 + c * 80;
           let y = 40 + r * 80;
 
-          let isSelected = selectedNode === i;
           let isValidTarget = false;
           if (selectedNode !== null && stone === 0) {
             let sr = Math.floor(selectedNode / 4);
@@ -309,61 +355,86 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
 
           return (
             <div
-              key={i}
+              key={`node-${i}`}
               className={`absolute flex items-center justify-center cursor-pointer ${isValidTarget ? 'z-20' : 'z-10'}`}
               style={{ left: x, top: y, width: 48, height: 48, transform: 'translate(-50%, -50%)' }}
               onClick={() => handleNodeClick(i)}
             >
-              <div className="w-2.5 h-2.5 bg-black rounded-full pointer-events-none absolute" />
+              <div className="w-2 h-2 bg-[#ff073a] opacity-50 rounded-full pointer-events-none absolute" style={{ boxShadow: '0 0 5px #ff073a' }} />
 
               {isValidTarget && turn === 1 && (
                 <>
-                  <div className="absolute w-8 h-8 bg-green-400 rounded-full animate-ping opacity-60" />
-                  <div className="absolute w-8 h-8 bg-green-500 rounded-full opacity-80 border-2 border-black" />
+                  <div className="absolute w-10 h-10 bg-transparent rounded-none border border-[#39ff14] animate-pulse opacity-60 pointer-events-none" style={{ boxShadow: '0 0 10px #39ff14, inset 0 0 10px #39ff14' }} />
                 </>
-              )}
-
-              {stone === 1 && (
-                <div className={`absolute w-10 h-10 rounded-full border-4 border-black bg-white transition-transform ${isSelected ? 'scale-110 shadow-[0_0_15px_rgba(255,255,255,1)] translate-y-[-4px]' : 'shadow-[2px_2px_0_0_#000] hover:scale-105'}`} />
-              )}
-
-              {stone === 2 && (
-                <div className="absolute w-10 h-10 rounded-full border-4 border-black bg-neutral-800 shadow-[2px_2px_0_0_#000]" />
               )}
             </div>
           )
         })}
+
+        {pieces.map(piece => {
+          let r = Math.floor(piece.pos / 4);
+          let c = piece.pos % 4;
+          let x = 40 + c * 80;
+          let y = 40 + r * 80;
+
+          let isSelected = selectedNode === piece.pos;
+
+          return (
+            <motion.div
+              key={piece.id}
+              initial={false}
+              animate={{ x, y }}
+              transition={{ type: "spring", stiffness: 450, damping: 30 }}
+              className={`absolute flex items-center justify-center z-30 ${piece.type === 1 && turn === 1 && status === 'playing' ? 'cursor-pointer' : ''}`}
+              style={{ left: 0, top: 0, width: 48, height: 48, marginLeft: -24, marginTop: -24 }}
+              onClick={(e) => { e.stopPropagation(); handleNodeClick(piece.pos); }}
+            >
+              {piece.type === 1 && (
+                <div className={`absolute w-10 h-10 border-2 border-[#39ff14] bg-[#1a1c29] transition-transform flex items-center justify-center ${isSelected ? 'scale-110 translate-y-[-2px]' : ''}`} style={{ boxShadow: isSelected ? '0 0 20px #39ff14, inset 0 0 10px #39ff14' : '0 0 5px #39ff14, inset 0 0 5px #39ff14' }}>
+                  <div className="w-4 h-4 bg-[#39ff14]" style={{ boxShadow: '0 0 10px #39ff14' }} />
+                </div>
+              )}
+              {piece.type === 2 && (
+                <div className="absolute w-10 h-10 border-2 border-[#ff073a] bg-[#1a1c29] flex items-center justify-center transition-transform" style={{ boxShadow: '0 0 5px #ff073a, inset 0 0 5px #ff073a' }}>
+                  <div className="w-4 h-4 border-2 border-[#ff073a] rotate-45" style={{ boxShadow: '0 0 10px #ff073a' }} />
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
       </div>
 
-      {message && status === 'playing' && (
-        <div className="bg-rose-100 border-4 border-black p-3 font-bold text-center w-[320px] mb-4 shadow-[4px_4px_0_0_#000] text-sm text-red-700">
-          {message}
-        </div>
-      )}
+      <div className="h-[64px] w-[320px] mb-2 flex items-center justify-center shrink-0">
+        {message && status === 'playing' && (
+          <div className="border border-[#00ffff] bg-[#00ffff]/10 p-2 font-pixel text-center w-full text-[10px] text-[#00ffff] leading-relaxed" style={{ textShadow: '0 0 5px #00ffff', boxShadow: '0 0 10px #00ffff, inset 0 0 5px #00ffff' }}>
+            {message}
+          </div>
+        )}
+      </div>
 
       {status !== 'playing' && (
-        <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-[#eedaab] border-8 border-black p-8 flex flex-col items-center text-center shadow-[16px_16px_0_0_rgba(0,0,0,1)] max-w-[340px] w-full">
-            <h3 className={`text-4xl font-black mb-4 drop-shadow-[2px_2px_0_rgba(255,255,255,1)] ${status === 'win' ? 'text-green-700' : 'text-red-700'}`}>
-              {status === 'win' ? '挑战成功！' : '游戏结束'}
+        <div className="absolute inset-0 bg-[#0d0e15]/80 z-50 flex items-center justify-center p-4 backdrop-blur-md">
+          <div className={`bg-[#0d0e15] border-[3px] p-8 flex flex-col items-center text-center max-w-[340px] w-full ${status==='win'? 'border-[#39ff14]' : 'border-[#ff073a]'}`} style={{ boxShadow: `0 0 20px ${status==='win' ? '#39ff14' : '#ff073a'}, inset 0 0 20px ${status==='win' ? '#39ff14' : '#ff073a'}` }}>
+            <h3 className={`text-2xl font-pixel mb-4 ${status === 'win' ? 'text-[#39ff14]' : 'text-[#ff073a]'}`} style={{ textShadow: `0 0 10px currentColor` }}>
+              {status === 'win' ? 'SYSTEM HACKED! LEVEL BEATEN' : 'SYSTEM FAILURE'}
             </h3>
-            <p className="font-bold text-lg mb-8 whitespace-pre-wrap">{message}</p>
+            <p className="font-cyber text-xl mb-8 whitespace-pre-wrap text-[#00ffff]" style={{ textShadow: '0 0 5px #00ffff' }}>{message}</p>
             <div className="flex flex-col gap-4 w-full">
               {status === 'win' && level < 20 && (
-                <RetroButton onClick={() => onWin(level)} className="bg-green-400 hover:bg-green-300">
-                  进入下一关 ➔
+                <RetroButton onClick={() => onWin(level)} color="green">
+                  NEXT LEVEL ➔
                 </RetroButton>
               )}
               {status === 'win' && level === 20 && (
-                <RetroButton onClick={() => onWin(level)} className="bg-yellow-400">
-                  🎉 返回主页
+                <RetroButton onClick={() => onWin(level)} color="yellow">
+                  🎉 ALL CLEAR!
                 </RetroButton>
               )}
               {status === 'lose' && (
-                <RetroButton onClick={resetGame}>再试一次 ↺</RetroButton>
+                <RetroButton onClick={resetGame} color="green">RETRY MISSION ↺</RetroButton>
               )}
-              <RetroButton onClick={onBack} className={status === 'win' ? '' : 'bg-red-400 hover:bg-red-300'}>
-                返回关卡
+              <RetroButton onClick={onBack} color="red">
+                ABORT TO MENU
               </RetroButton>
             </div>
           </div>
@@ -371,7 +442,7 @@ function Game({ level, targetMoves, onBack, onWin }: { level: number, targetMove
       )}
 
       <div className="w-[320px]">
-        <RetroButton onClick={onBack} className="w-full">🏳️ 放弃并返回</RetroButton>
+        <RetroButton onClick={onBack} color="red" className="w-full text-xs">ABORT MISSION</RetroButton>
       </div>
     </div>
   )
@@ -383,6 +454,12 @@ export default function App() {
   const [unlockedLevel, setUnlockedLevel] = useState<number>(() => {
     return parseInt(localStorage.getItem('pixelFourUnlocked') || '1');
   });
+  const [audioOn, setAudioOn] = useState(false);
+
+  const toggleAudio = () => {
+    synth.toggle();
+    setAudioOn(synth.isPlaying);
+  };
 
   const handleWin = (wonLevel: number) => {
     if (wonLevel === unlockedLevel && wonLevel < 20) {
@@ -397,64 +474,80 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-sky-200 flex flex-col items-center py-8 font-sans select-none overflow-hidden text-black transition-colors duration-500">
+    <div className="min-h-screen flex flex-col items-center py-8 font-pixel select-none overflow-hidden transition-colors duration-500">
       
       {/* Heavy stylized pixel borders reset */}
       <style>{`
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
       `}</style>
+      
+      <div className="fixed top-4 right-4 z-50">
+        <button 
+          onClick={toggleAudio}
+          className="text-[#39ff14] border-2 border-[#39ff14] px-3 py-2 font-cyber hover:bg-green-900/40 opacity-70 hover:opacity-100 transition-all text-sm"
+          style={{ textShadow: '0 0 5px #39ff14', boxShadow: '0 0 5px #39ff14' }}
+        >
+          {audioOn ? '■ AUDIO: ON' : '▶ AUDIO: OFF'}
+        </button>
+      </div>
 
       {view === 'menu' && (
-        <div className="flex flex-col items-center mt-12 w-full max-w-[400px]">
-          <h1 className="text-5xl font-black mb-8 drop-shadow-[4px_4px_0_rgba(0,0,0,1)] text-[#fff] tracking-widest text-center">
-            四子像素棋<br />
-            <span className="text-2xl mt-4 block text-yellow-300 drop-shadow-[2px_2px_0_rgba(0,0,0,1)] bg-black px-4 py-2 inline-block -rotate-2">
-              绝命闯关
-            </span>
+        <div className="flex flex-col items-center mt-6 w-full max-w-[480px]">
+          <h1 className="text-6xl font-pixel mb-2 text-[#39ff14] tracking-wider text-center" style={{ textShadow: '0 0 10px #39ff14, 0 0 20px #39ff14' }}>
+            3X3 LINE
           </h1>
-          
-          <div className="flex flex-col gap-5 w-full px-8">
-            <RetroButton onClick={() => { setCurrentLevel(unlockedLevel); setView('game'); }} className="text-xl">
-              {unlockedLevel > 1 ? '继续游戏 ▶' : '开始游戏 ▶'}
-            </RetroButton>
-            <RetroButton onClick={() => setView('levels')} className="text-xl">
-              关卡选择 ☰
-            </RetroButton>
-          </div>
+          <h2 className="text-sm font-pixel text-[#ff073a] tracking-widest mb-12" style={{ textShadow: '0 0 5px #ff073a' }}>
+            A RETRO BOARD GAME
+          </h2>
 
-          <div className="mt-12 bg-white p-5 border-4 border-black text-sm w-[300px] shadow-[6px_6px_0_0_#000]">
-            <h3 className="font-black mb-3 text-center text-lg bg-black text-white py-1">💡 游戏规则</h3>
-            <ul className="list-disc pl-4 space-y-2 font-bold text-gray-800 tracking-tight leading-snug">
-              <li>黑白双方各四子，<span className="text-blue-600">一次移一步</span>。率先四子连成一直线（横/竖/斜）者胜利。</li>
-              <li>初始的连线状态不算作胜利！</li>
-              <li><span className="text-red-600">极限挑战：</span>你必须在与电脑周旋至少<strong className="text-black text-base drop-shadow-[1px_1px_rgba(255,255,0,1)]"> 目标步数 </strong>之后，再连成四子才能通关！</li>
-              <li>没到要求步数就提前连线<span className="text-red-600 font-bold text-lg">判负！</span>（直接结束！不可提早击杀）。</li>
-            </ul>
+          <div className="border-[3px] border-[#ff073a] p-8 w-full relative" style={{ boxShadow: '0 0 10px #ff073a, inset 0 0 10px #ff073a' }}>
+            <h3 className="text-xl font-pixel text-[#39ff14] text-center mb-8" style={{ textShadow: '0 0 5px #39ff14' }}>
+              SELECT MODE
+            </h3>
+          
+            <div className="flex flex-col gap-4 w-full px-8">
+              <RetroButton onClick={() => { setCurrentLevel(unlockedLevel); setView('game'); }} color="green" className="text-xl">
+                {unlockedLevel > 1 ? 'CONTINUE ▶' : 'START CAMPAIGN'}
+              </RetroButton>
+              <RetroButton onClick={() => setView('levels')} color="yellow" className="text-xl">
+                CAMPAIGN • 20 LEVELS
+              </RetroButton>
+            </div>
+
+            <div className="mt-12 text-center text-sm font-cyber text-gray-300 tracking-widest space-y-2 opacity-80">
+              <p>WHITE STARTS</p>
+              <p>MOVE 1 STEP</p>
+              <p>4 IN A LINE WINS</p>
+            </div>
+          </div>
+          
+          <div className="mt-16 text-xs font-cyber text-gray-600">
+            © 3X3 LINE — PIXEL EDITION
           </div>
         </div>
       )}
 
       {view === 'levels' && (
         <div className="flex flex-col items-center w-full max-w-md px-4 mt-8">
-          <h2 className="text-4xl font-black mb-8 drop-shadow-[4px_4px_0_rgba(0,0,0,1)] text-white text-center pb-2">关卡选择</h2>
+          <h2 className="text-3xl font-pixel mb-8 text-[#00ffff] text-center pb-2" style={{ textShadow: '0 0 10px #00ffff' }}>CAMPAIGN LEVELS</h2>
           <div className="grid grid-cols-4 gap-4 mb-10 w-[320px]">
             {Array.from({ length: 20 }, (_, i) => i + 1).map(l => (
               <RetroButton
                 key={l}
                 disabled={l > unlockedLevel}
+                color={l === unlockedLevel ? "cyan" : "green"}
                 onClick={() => { setCurrentLevel(l); setView('game'); }}
-                className={l > unlockedLevel ? 'h-16' : 'h-16 bg-white hover:scale-105 active:scale-95'}
+                className={`h-16 ${l > unlockedLevel ? '' : 'hover:scale-105'} p-0`}
               >
                 <div className="flex flex-col items-center justify-center">
                    <div className="text-lg">{l}</div>
-                   {l <= unlockedLevel && <div className="text-[10px] text-gray-500 font-bold">{l * 20}步</div>}
+                   {l <= unlockedLevel && <div className="text-[10px] text-gray-500 font-cyber font-bold mt-1">{l * 20} MOVES</div>}
                 </div>
               </RetroButton>
             ))}
           </div>
           <div className="w-[320px]">
-             <RetroButton onClick={() => setView('menu')} className="w-full">返回主菜单</RetroButton>
+             <RetroButton onClick={() => setView('menu')} color="red" className="w-full">BACK TO MENU</RetroButton>
           </div>
         </div>
       )}

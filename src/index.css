@@ -1,1 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-pixel: "Press Start 2P", system-ui, monospace;
+  --font-cyber: "VT323", monospace;
+}
+
+body {
+  background: radial-gradient(circle at center, #1a1c29 0%, #0d0e15 100%);
+  color: #fff;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel);
+}
+
+.font-cyber {
+  font-family: var(--font-cyber);
+}
+
+/* Neon glow animations */
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+  }
+  20%, 24%, 55% {
+    opacity: 0.5;
+  }
+}
+
+.neon-text-green {
+  color: #39ff14;
+  text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 20px #39ff14;
+}
+
+.neon-box-green {
+  border-color: #39ff14;
+  box-shadow: 0 0 10px #39ff14, inset 0 0 10px #39ff14;
+}
+
+.neon-box-red {
+  border-color: #ff073a;
+  box-shadow: 0 0 10px #ff073a, inset 0 0 10px #ff073a;
+}
