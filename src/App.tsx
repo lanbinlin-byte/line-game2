@@ -214,7 +214,7 @@ const RetroButton = ({ children, onClick, disabled = false, color = 'green', cla
   );
 };
 
-const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) => void }> = ({ level, onBack, onWin }) => {
+const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) => void, isMultiplayer?: boolean }> = ({ level, onBack, onWin, isMultiplayer }) => {
   const [board, setBoard] = useState<number[]>([...INITIAL_BOARD]);
   const [pieces, setPieces] = useState<PieceType[]>([...INITIAL_PIECES]);
   const [turn, setTurn] = useState<number>(1);
@@ -237,7 +237,10 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
         setMessage('双方死锁，平局结束！');
         return;
       }
-      setMessage(turn === 1 ? '你被卡住无法移动，跳过回合！' : '电脑无法移动，跳过回合！');
+      let skipMessage = isMultiplayer 
+         ? (turn === 1 ? '白方被卡住无法移动，跳过回合！' : '黑方无法移动，跳过回合！')
+         : (turn === 1 ? '你被卡住无法移动，跳过回合！' : '电脑无法移动，跳过回合！');
+      setMessage(skipMessage);
       const timer = setTimeout(() => {
         setMessage('');
         setTurn(turn === 1 ? 2 : 1);
@@ -245,7 +248,7 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
       return () => clearTimeout(timer);
     }
 
-    if (turn === 2 && status === 'playing') {
+    if (!isMultiplayer && turn === 2 && status === 'playing') {
       const timer = setTimeout(() => {
         let aiTarget = getBestMove([...board], level, aiPreferences);
         if (aiTarget) {
@@ -273,9 +276,10 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
   }, [turn, status, board, level]);
 
   const handleNodeClick = (i: number) => {
-    if (turn !== 1 || status !== 'playing') return;
+    if (status !== 'playing') return;
+    if (!isMultiplayer && turn !== 1) return;
 
-    if (board[i] === 1) {
+    if (board[i] === turn) {
       setSelectedNode(i);
       return;
     }
@@ -291,8 +295,8 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
 
       let newBoard = [...board];
       newBoard[selectedNode] = 0;
-      newBoard[i] = 1;
-      let newMoves = playerMoves + 1;
+      newBoard[i] = turn;
+      let newMoves = turn === 1 ? playerMoves + 1 : playerMoves;
 
       setHistory(prev => [...prev, {
         board: [...board],
@@ -301,19 +305,23 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
       }]);
 
       setPieces(prev => prev.map(p => p.pos === selectedNode ? { ...p, pos: i } : p));
-      setPlayerMoves(newMoves);
+      if (turn === 1) setPlayerMoves(newMoves);
       setBoard(newBoard);
       setSelectedNode(null);
       synth.playMoveSound();
 
       let winCheck = getWinningLine(newBoard);
-      if (winCheck.winner === 1) {
-        setStatus('win');
-        setMessage(`系统破解成功！\n你用了 ${newMoves} 步将死了电脑！成功通过第 ${level} 关！`);
+      if (winCheck.winner === turn) {
+        setStatus(turn === 1 ? 'win' : 'lose');
+        if (isMultiplayer) {
+           setMessage(turn === 1 ? '白方（玩家1）获胜！' : '黑方（玩家2）获胜！');
+        } else {
+           setMessage(`系统破解成功！\n你用了 ${newMoves} 步将死了电脑！成功通过第 ${level} 关！`);
+        }
         setWinningLine(winCheck.line);
       } else {
         setMessage('');
-        setTurn(2);
+        setTurn(turn === 1 ? 2 : 1);
       }
     }
   };
@@ -332,7 +340,8 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
   };
 
   const undoMove = () => {
-    if (history.length === 0 || status !== 'playing' || turn !== 1) return;
+    if (history.length === 0 || status !== 'playing') return;
+    if (!isMultiplayer && turn !== 1) return;
     const previous = history[history.length - 1];
     setBoard(previous.board);
     setPieces(previous.pieces);
@@ -345,13 +354,15 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
     <div className="flex flex-col items-center mt-4 w-full px-4 max-w-2xl">
       <div className="flex justify-between items-end w-full mb-4 shrink-0">
         <div className="flex flex-col justify-end h-full">
-          <h2 className="text-2xl sm:text-3xl font-pixel mb-2 text-[#00ffff] leading-none" style={{ textShadow: '0 0 5px #00ffff' }}>第 {level} 关</h2>
+          <h2 className="text-2xl sm:text-3xl font-pixel mb-2 text-[#00ffff] leading-none" style={{ textShadow: '0 0 5px #00ffff' }}>{isMultiplayer ? '1V1 对战' : `第 ${level} 关`}</h2>
           <div className="text-[10px] sm:text-xs font-pixel border border-[#39ff14] text-[#39ff14] px-2 py-1 inline-block whitespace-nowrap" style={{ boxShadow: '0 0 5px #39ff14, inset 0 0 5px #39ff14', textShadow: '0 0 5px #39ff14' }}>
-            {turn === 1 && status === 'playing' ? '> 你的回合' : '> 电脑思考中...'}
+            {isMultiplayer 
+               ? (status === 'playing' ? (turn === 1 ? '> 白方回合' : '> 黑方回合') : '> 游戏结束')
+               : (turn === 1 && status === 'playing' ? '> 你的回合' : '> 电脑思考中...')}
           </div>
         </div>
         <div className="text-right font-pixel flex flex-col justify-end h-full text-[#39ff14]" style={{ textShadow: `0 0 5px currentColor` }}>
-          <div className="text-[10px] sm:text-xs text-gray-400 mb-2 leading-none tracking-widest text-right">步数</div>
+          <div className="text-[10px] sm:text-xs text-gray-400 mb-2 leading-none tracking-widest text-right">{isMultiplayer ? "回合数" : "步数"}</div>
           <div className="text-3xl sm:text-4xl leading-none">{playerMoves}</div>
         </div>
       </div>
@@ -399,9 +410,9 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
             >
               <div className="w-[15%] h-[15%] bg-[#ff073a] opacity-50 rounded-full pointer-events-none absolute" style={{ boxShadow: '0 0 5px #ff073a' }} />
 
-              {isValidTarget && turn === 1 && (
+              {isValidTarget && (isMultiplayer || turn === 1) && (
                 <>
-                  <div className="absolute w-[80%] h-[80%] bg-transparent rounded-none border-2 border-[#39ff14] animate-pulse opacity-60 pointer-events-none" style={{ boxShadow: '0 0 10px #39ff14, inset 0 0 10px #39ff14' }} />
+                  <div className={`absolute w-[80%] h-[80%] bg-transparent rounded-none border-2 animate-pulse opacity-60 pointer-events-none ${turn === 1 ? 'border-[#39ff14]' : 'border-[#ff073a]'}`} style={{ boxShadow: `0 0 10px ${turn === 1 ? '#39ff14' : '#ff073a'}, inset 0 0 10px ${turn === 1 ? '#39ff14' : '#ff073a'}` }} />
                 </>
               )}
             </div>
@@ -423,7 +434,7 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
               initial={false}
               animate={{ left: `${x}%`, top: `${y}%` }}
               transition={{ type: "spring", stiffness: 450, damping: 30 }}
-              className={`absolute flex items-center justify-center z-30 ${piece.type === 1 && turn === 1 && status === 'playing' ? 'cursor-pointer' : ''}`}
+              className={`absolute flex items-center justify-center z-30 ${piece.type === turn && status === 'playing' && (isMultiplayer || turn === 1) ? 'cursor-pointer' : ''}`}
               style={{ width: '25%', height: '25%', transform: 'translate(-50%, -50%)', zIndex: isWinningPiece ? 50 : 30 }}
               onClick={(e) => { e.stopPropagation(); handleNodeClick(piece.pos); }}
             >
@@ -434,7 +445,7 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
                   </div>
                 )}
                 {piece.type === 2 && (
-                  <div className={`absolute w-full h-full border-2 sm:border-4 border-[#ff073a] bg-[#1a1c29] flex items-center justify-center transition-transform ${isWinningPiece ? 'animate-pulse bg-[#ff073a]/30 scale-110' : ''}`} style={{ boxShadow: isWinningPiece ? '0 0 30px #ff073a, inset 0 0 30px #ff073a' : '0 0 5px #ff073a, inset 0 0 5px #ff073a' }}>
+                  <div className={`absolute w-full h-full border-2 sm:border-4 border-[#ff073a] bg-[#1a1c29] flex items-center justify-center transition-transform ${isSelected ? 'scale-110 translate-y-[-2px]' : ''} ${isWinningPiece ? 'animate-pulse bg-[#ff073a]/30 scale-110' : ''}`} style={{ boxShadow: isWinningPiece ? '0 0 30px #ff073a, inset 0 0 30px #ff073a' : isSelected ? '0 0 20px #ff073a, inset 0 0 10px #ff073a' : '0 0 5px #ff073a, inset 0 0 5px #ff073a' }}>
                     <div className="w-[20%] h-[20%] border sm:border-2 border-[#ff073a] rotate-45" style={{ boxShadow: '0 0 10px #ff073a' }} />
                   </div>
                 )}
@@ -446,7 +457,7 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
 
       <div className="h-auto w-full max-w-lg mb-2 flex flex-col justify-center shrink-0">
         <div className="flex gap-4 w-full mb-4">
-          <RetroButton onClick={undoMove} disabled={history.length === 0 || status !== 'playing' || turn !== 1} color="yellow" className="py-3 sm:py-4 text-xs sm:text-sm">悔棋 ↶</RetroButton>
+          <RetroButton onClick={undoMove} disabled={history.length === 0 || status !== 'playing' || (!isMultiplayer && turn !== 1)} color="yellow" className="py-3 sm:py-4 text-xs sm:text-sm">悔棋 ↶</RetroButton>
           <RetroButton onClick={resetGame} color="cyan" className="py-3 sm:py-4 text-xs sm:text-sm">重新开始 ↻</RetroButton>
         </div>
         
@@ -461,22 +472,24 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
         <div className="absolute inset-0 bg-[#0d0e15]/80 z-50 flex items-center justify-center p-4 backdrop-blur-md">
           <div className={`bg-[#0d0e15] border-[3px] p-8 flex flex-col items-center text-center max-w-md w-full ${status==='win'? 'border-[#39ff14]' : status==='draw' ? 'border-[#ffff00]' : 'border-[#ff073a]'}`} style={{ boxShadow: `0 0 20px ${status==='win' ? '#39ff14' : status==='draw' ? '#ffff00' : '#ff073a'}, inset 0 0 20px ${status==='win' ? '#39ff14' : status==='draw' ? '#ffff00' : '#ff073a'}` }}>
             <h3 className={`text-2xl sm:text-3xl font-pixel mb-6 ${status === 'win' ? 'text-[#39ff14]' : status==='draw' ? 'text-[#ffff00]' : 'text-[#ff073a]'}`} style={{ textShadow: `0 0 10px currentColor` }}>
-              {status === 'win' ? '系统破解！挑战成功' : status==='draw' ? '双方死锁！未分胜负' : '协议失败！再接再厉'}
+              {isMultiplayer 
+                ? (status === 'win' ? '白方获胜！' : status === 'draw' ? '双方死锁！未分胜负' : '黑方获胜！')
+                : (status === 'win' ? '系统破解！挑战成功' : status==='draw' ? '双方死锁！未分胜负' : '协议失败！再接再厉')}
             </h3>
             <p className="font-cyber text-lg sm:text-xl mb-10 whitespace-pre-wrap text-[#00ffff]" style={{ textShadow: '0 0 5px #00ffff' }}>{message}</p>
             <div className="flex flex-col gap-4 w-full">
-              {status === 'win' && level < 20 && (
+              {status === 'win' && level < 20 && !isMultiplayer && (
                 <RetroButton onClick={() => onWin(level)} color="green">
                   进入下一关 ➔
                 </RetroButton>
               )}
-              {status === 'win' && level === 20 && (
+              {status === 'win' && level === 20 && !isMultiplayer && (
                 <RetroButton onClick={() => onWin(level)} color="yellow">
                   🎉 全部通关！
                 </RetroButton>
               )}
-              {(status === 'lose' || status === 'draw') && (
-                <RetroButton onClick={resetGame} color="green">再试一次 ↺</RetroButton>
+              {(status === 'lose' || status === 'draw' || isMultiplayer) && (
+                <RetroButton onClick={resetGame} color="green">再来一局 ↺</RetroButton>
               )}
               <RetroButton onClick={onBack} color="red">
                 返回菜单
@@ -494,7 +507,7 @@ const Game: React.FC<{ level: number, onBack: () => void, onWin: (lvl: number) =
 }
 
 export default function App() {
-  const [view, setView] = useState<'menu' | 'levels' | 'game'>('menu');
+  const [view, setView] = useState<'menu' | 'levels' | 'game' | 'multiplayer'>('menu');
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [unlockedLevel, setUnlockedLevel] = useState<number>(() => {
     return parseInt(localStorage.getItem('pixelFourUnlocked') || '1');
@@ -604,6 +617,9 @@ export default function App() {
               <RetroButton onClick={() => setView('levels')} color="yellow" className="text-lg sm:text-xl py-3">
                 选择关卡
               </RetroButton>
+              <RetroButton onClick={() => setView('multiplayer')} color="cyan" className="text-lg sm:text-xl py-3">
+                1V1 对战
+              </RetroButton>
             </div>
 
             <div className="mt-8 sm:mt-12 text-center text-xs sm:text-sm font-cyber text-[#00ffff] tracking-widest space-y-2 opacity-80" style={{ textShadow: '0 0 2px #00ffff, 0 0 5px #00ffff' }}>
@@ -649,6 +665,16 @@ export default function App() {
           level={currentLevel}
           onBack={() => setView('levels')}
           onWin={handleWin}
+        />
+      )}
+
+      {view === 'multiplayer' && (
+        <Game
+          key="multiplayer"
+          level={0}
+          onBack={() => setView('menu')}
+          onWin={() => {}}
+          isMultiplayer={true}
         />
       )}
     </div>
